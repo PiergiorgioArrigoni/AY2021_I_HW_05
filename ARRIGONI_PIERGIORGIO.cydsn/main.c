@@ -6,6 +6,7 @@
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
+#include "stdio.h"
 
 #define LIS3DH_DEVICE_ADDRESS 0x18 //address of the slave device
 #define LIS3DH_STATUS_REG 0x27 //address of the Status register
@@ -28,6 +29,8 @@ int main(void)
     UART_Start();
     EEPROM_Start();
     
+    CyDelay(5); //boot procedure takes 5 ms to complete
+    
     fs_index = EEPROM_ReadByte(EEPROM_ADDRESS); //startup register reading
       
     uint16 fs_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200}; //sampling frequency values
@@ -36,6 +39,19 @@ int main(void)
     //Enable button interrupt
     CyGlobalIntEnable;
     ISR_Button_StartEx(Button_ISR);
+    
+    char message[50]; //string to send to the UART
+
+    //Checking which devices are present on the I2C bus (LIS3DH_DEVICE_ADDRESS should be present)
+    for(uint8 i=0; i<128; i++)
+    {
+        if(I2C_IsDeviceConnected(i))
+        {
+            sprintf(message, "Device 0x%02X is connected\r\n", i);
+            UART_PutString(message); 
+        }
+        
+    }
 
     for(;;)
     {
