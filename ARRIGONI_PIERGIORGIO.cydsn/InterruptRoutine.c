@@ -6,7 +6,7 @@
 
 #include "InterruptRoutine.h"
 
-CY_ISR(Button_ISR) //ISR triggered by the pressing of the button
+CY_ISR(Button_ISR)
 {   
     fs_index++;
     
@@ -14,7 +14,7 @@ CY_ISR(Button_ISR) //ISR triggered by the pressing of the button
         fs_index = 0;
     
     EEPROM_UpdateTemperature(); //security measure if temperature has changed of few degrees
-    EEPROM_WriteByte(fs_index, EEPROM_BYTE); //startup register writing
+    EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
 }
 
 /* [] END OF FILE */
