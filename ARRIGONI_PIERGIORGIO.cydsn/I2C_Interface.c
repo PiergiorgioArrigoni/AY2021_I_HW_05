@@ -34,10 +34,11 @@ uint8 I2C_ReadRegister(uint8 device_address, uint8 register_address, uint8* data
         }
     }
     I2C_Master_MasterSendStop(); //send stop condition
+    
     return error ? 1 : 0; //return 1 if there is an error, 0 otherwise
 }
 
-uint8 I2C_Peripheral_WriteRegister(uint8 device_address, uint8 register_address, uint8 data)
+uint8 I2C_WriteRegister(uint8 device_address, uint8 register_address, uint8 data)
 {
     uint8 error = I2C_Master_MasterSendStart(device_address, I2C_Master_WRITE_XFER_MODE); //send start condition
     if (error == I2C_Master_MSTR_NO_ERROR)
@@ -49,6 +50,7 @@ uint8 I2C_Peripheral_WriteRegister(uint8 device_address, uint8 register_address,
         }
     }
     I2C_Master_MasterSendStop(); //send stop condition
+    
     return error ? 1 : 0; //return 1 if there is an error, 0 otherwise
 }
 

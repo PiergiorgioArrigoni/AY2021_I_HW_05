@@ -15,6 +15,8 @@ CY_ISR(Button_ISR)
     
     EEPROM_UpdateTemperature(); //security measure if temperature has changed of few degrees
     EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
+    
+    flag_button = 1;
 }
 
 /* [] END OF FILE */

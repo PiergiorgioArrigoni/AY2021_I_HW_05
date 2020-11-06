@@ -13,6 +13,7 @@
     #define NUMB_OF_FREQ 6 //number of sampling frequency values
     
     volatile uint8 fs_index; //index of the current sampling frequency
+    volatile uint8 flag_button;
     
     CY_ISR_PROTO(Button_ISR); //ISR triggered by the pressing of the button
 #endif
