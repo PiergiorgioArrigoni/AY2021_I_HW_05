@@ -13,8 +13,10 @@ int main(void)
     UART_Start();
     EEPROM_Start();
     
-    //Read EEPROM value
-    uint8 eeprom_value = EEPROM_ReadByte(EEPROM_BYTE);    
+    eeprom_index = EEPROM_ReadByte(EEPROM_BYTE);
+      
+    uint16 eeprom_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200};
+    uint16 eeprom_freq = eeprom_values[eeprom_index];
     
     //Enable button interrupt
     CyGlobalIntEnable;
