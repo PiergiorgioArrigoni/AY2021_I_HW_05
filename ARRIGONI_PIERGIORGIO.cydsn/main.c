@@ -13,10 +13,10 @@ int main(void)
     UART_Start();
     EEPROM_Start();
     
-    eeprom_index = EEPROM_ReadByte(EEPROM_BYTE);
+    fs_index = EEPROM_ReadByte(EEPROM_BYTE); //startup register reading
       
-    uint16 eeprom_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200};
-    uint16 eeprom_freq = eeprom_values[eeprom_index];
+    uint16 fs_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200}; //sampling frequency values
+    uint16 fs_current = fs_values[fs_index]; //sampling frequency value at startup
     
     //Enable button interrupt
     CyGlobalIntEnable;

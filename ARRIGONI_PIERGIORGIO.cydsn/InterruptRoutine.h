@@ -9,10 +9,10 @@
     
     #include "project.h"
     
-    #define EEPROM_BYTE 0x00
-    #define NUMB_OF_FREQ 6
+    #define EEPROM_BYTE 0x00 //eeprom byte on which the index of the startup sampling frequency is saved
+    #define NUMB_OF_FREQ 6 //number of sampling frequency values
     
-    volatile uint8 eeprom_index;
+    volatile uint8 fs_index; //index of the current sampling frequency
     
     CY_ISR_PROTO(Button_ISR); //ISR triggered by button push (with debouncer component implemented)
 #endif
