@@ -251,8 +251,10 @@
   <Data key="DataVersionKey" value="2" />
   <Group key="DWRInstGuidMapping">
     <Group key="Pin">
-      <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="Button" />
+      <Data key="02f2cf2c-2c7a-49df-9246-7a3435c21be3" value="SCL" />
+      <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="Push_Button" />
       <Data key="34cfed22-c960-4363-8ecf-2f6fc0d15200" value="I2C" />
+      <Data key="22863ebe-a37b-476f-b252-6e49a8c00b12" value="SDA" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="TX" />
     </Group>
   </Group>
@@ -3340,9 +3342,19 @@
     </Group>
   </Group>
   <Group key="Pin2">
+    <Group key="02f2cf2c-2c7a-49df-9246-7a3435c21be3">
+      <Group key="0">
+        <Data key="Port Format" value="12,0" />
+      </Group>
+    </Group>
     <Group key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba">
       <Group key="0">
         <Data key="Port Format" value="2,2" />
+      </Group>
+    </Group>
+    <Group key="22863ebe-a37b-476f-b252-6e49a8c00b12">
+      <Group key="0">
+        <Data key="Port Format" value="12,1" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">
