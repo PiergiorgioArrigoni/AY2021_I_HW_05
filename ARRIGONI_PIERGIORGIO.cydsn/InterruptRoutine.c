@@ -13,9 +13,6 @@ CY_ISR(Button_ISR)
     if(fs_index == NUMB_OF_FREQ) //cycle must be started again
         fs_index = 0;
     
-    EEPROM_UpdateTemperature(); //security measure if temperature has changed of few degrees
-    EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
-    
     flag_button = 1;
 }
 

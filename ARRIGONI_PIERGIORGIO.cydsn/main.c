@@ -11,6 +11,9 @@
 #include "I2C_Interface.h"
 #include "stdio.h"
 
+#define EEPROM_ADDRESS 0x00 //eeprom address on which the index of the startup sampling frequency is saved
+
+//LIS3DH control/status registers
 #define LIS3DH_DEVICE_ADDRESS 0x18 //address of the slave device
 #define LIS3DH_CTRL_REG1 0x20 //address of the control register 1
 #define LIS3DH_SET_CTRL_REG1 0x07 //low mode disabled, all three axes enabled (4 lsbs of control register 1)
@@ -76,7 +79,7 @@ int main(void)
     uint8 ctrl_reg1; 
     error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, &ctrl_reg1);
     
-    if (error == 0)
+    if (!error)
     {
         sprintf(message, "CONTROL REGISTER 1: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
         UART_PutString(message); 
@@ -91,7 +94,7 @@ int main(void)
         ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
         error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
     
-        if (error == 0)
+        if (!error)
         {
             sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
             UART_PutString(message); 
@@ -106,7 +109,7 @@ int main(void)
     uint8 ctrl_reg4; 
     error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG4, &ctrl_reg4);
     
-    if (error == 0)
+    if (!error)
     {
         sprintf(message, "CONTROL REGISTER 4: 0x%02X\r\n", ctrl_reg4);
         UART_PutString(message); 
@@ -121,7 +124,7 @@ int main(void)
         ctrl_reg4 = LIS3DH_SET_CTRL_REG4;
         error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG4, ctrl_reg4);
     
-        if (error == 0)
+        if (!error)
         {
             sprintf(message, "CONTROL REGISTER 4 successfully written as: 0x%02X\n", ctrl_reg4);
             UART_PutString(message); 
@@ -152,11 +155,14 @@ int main(void)
         if(flag_button)
         {
             flag_button = 0;
+            EEPROM_UpdateTemperature(); //security measure because temperature might have changed of more than 10 degrees
+            EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
+            
             fs_current = fs_config[fs_index];
             ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
             error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
         
-            if (error == 0)
+            if (!error)
             {
                 sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
                 UART_PutString(message); 
@@ -168,7 +174,7 @@ int main(void)
         }
         
         error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_STATUS_REG, &new);
-        if (error == 0)
+        if (!error)
         {
             if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the registers
             {
@@ -184,11 +190,11 @@ int main(void)
                 error = 0;
                 for(i=0; i<6; i++) 
                 {
-                    if(error_acc[i] == 1)
+                    if(error_acc[i])
                         error = 1;
                 }
                     
-                if(error == 0)
+                if(!error)
                 {  
                     //Fixing X output for transmission
                     value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left-aligned
