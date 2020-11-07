@@ -35,7 +35,7 @@ uint8 I2C_ReadRegister(uint8 device_address, uint8 register_address, uint8* data
     }
     I2C_Master_MasterSendStop(); //send stop condition
     
-    return error ? 1 : 0; //return 1 if there is an error, 0 otherwise
+    return error ? 1:0; //return 1 if there is an error, 0 otherwise
 }
 
 uint8 I2C_WriteRegister(uint8 device_address, uint8 register_address, uint8 data)
@@ -51,7 +51,7 @@ uint8 I2C_WriteRegister(uint8 device_address, uint8 register_address, uint8 data
     }
     I2C_Master_MasterSendStop(); //send stop condition
     
-    return error ? 1 : 0; //return 1 if there is an error, 0 otherwise
+    return error ? 1:0; //return 1 if there is an error, 0 otherwise
 }
 
 /* [] END OF FILE */

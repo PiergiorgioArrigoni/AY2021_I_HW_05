@@ -12,9 +12,9 @@
 #define LIS3DH_CTRL_REG1 0x20 //address of the control register 1
 #define LIS3DH_SET_CTRL_REG1 0x07 //low mode disabled, all three axes enabled (4 lsbs of control register 1)
 #define LIS3DH_CTRL_REG4 0x23 //address of the Control register 4
-#define LIS3DH_SET_CTRL_REG4 0x08 //bdu and high-resolution mode enabled, full scale ±4g 
+#define LIS3DH_SET_CTRL_REG4 0x88 //bdu and high-resolution mode enabled, full scale ±2g 
 #define LIS3DH_STATUS_REG 0x27 //address of the status register
-#define LIS3DH_READY_STATUS_REG 0x08 //a new set of data is available
+#define LIS3DH_READY_STATUS_REG 0x08 //bit that goes to 1 when a new set of data is available
 
 //Accelerometer output registers
 #define LIS3DH_OUT_X_L 0x28
@@ -130,15 +130,18 @@ int main(void)
         }
     }
     
+    //Measurement variables definition
     uint8 AccelData[6];
-    uint16 value[3];
+    int16 value[3];
     float acc[3];
     uint16 scale = 1000;
     
+    //Data packet sent to the UART
     uint8 DataBuffer[8];
     DataBuffer[0] = 0xA0; //header byte
     DataBuffer[7] = 0xC0; //tail byte
     
+    uint8 new;
     uint8 error_acc[6];
     flag_button = 0;
     
@@ -161,47 +164,63 @@ int main(void)
             }
         }
         
-        //CyDelay(100);
-        
-        //Accelerometer values reading
-        error_acc[0] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, &AccelData[0]);
-        error_acc[1] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_H, &AccelData[1]);
-        error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_L, &AccelData[2]);
-        error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_H, &AccelData[3]);
-        error_acc[4] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_L, &AccelData[4]);
-        error_acc[5] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_H, &AccelData[5]);
-        
-        error = 0;
-        for(i=0; i<6; i++) //checking if there has been at least one error in accelerometer readings
+        error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_STATUS_REG, &new);
+        if (error == 0)
         {
-            if(error_acc[i] == 1)
-                error = 1;
-        }
-            
-        if(error == 0)
-        {  
-            value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
-            acc[0] = value[0] * 8/65535;
-            sprintf(message, "X output: %.3f\n", acc[0]);
-            UART_PutString(message);
-            
-            value[1] = (int16) (AccelData[2] | (AccelData[3]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
-            acc[1] = value[1] * 8/65535;
-            sprintf(message, "Y output: %.3f\n", acc[1]);
-            UART_PutString(message);
-            
-            value[2] = (int16) (AccelData[4] | (AccelData[5]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
-            acc[2] = value[2] * 8/65535;
-            sprintf(message, "Z output: %.3f\n", acc[2]);
-            UART_PutString(message);
-
-            /*OutArray[1] = (uint8_t)(OutTemp & 0xFF);
-            OutArray[2] = (uint8_t)(OutTemp >> 8);
-            UART_PutArray(OutArray, 4);*/
+            if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the registers
+            {
+                //Accelerometer values reading
+                error_acc[0] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, &AccelData[0]);
+                error_acc[1] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_H, &AccelData[1]);
+                error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_L, &AccelData[2]);
+                error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_H, &AccelData[3]);
+                error_acc[4] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_L, &AccelData[4]);
+                error_acc[5] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_H, &AccelData[5]);
+                
+                error = 0;
+                for(i=0; i<6; i++) //checking if there has been at least one error in accelerometer readings
+                {
+                    if(error_acc[i] == 1)
+                        error = 1;
+                }
+                    
+                if(error == 0)
+                {  
+                    value[0] = (int16) ((AccelData[0] | (AccelData[1]<<8)) >> 4); //high resolution mode is 12 bit left aligned
+                    acc[0] = value[0] * 4/4096; //full scale range is 4g on 12 bits
+                    sprintf(message, "X output: %.3f e %d\n", acc[0], value[0]);
+                    UART_PutString(message);
+                    value[0] = (int16) (acc[0]*scale);
+                    DataBuffer[1] = (uint8) (value[0] & 0xFF);
+                    DataBuffer[2] = (uint8) (value[0]*scale >> 8);
+                    
+                    value[1] = (int16) ((AccelData[2] | (AccelData[3]<<8)) >> 4);
+                    acc[1] = value[1] * 4/4096;
+                    sprintf(message, "Y output: %.3f e %d\n", acc[1], value[1]);
+                    UART_PutString(message);
+                    value[1] = (int16) (acc[1]*scale);
+                    DataBuffer[3] = (uint8) (value[1] & 0xFF);
+                    DataBuffer[4] = (uint8) (value[1]*scale >> 8);
+                    
+                    value[2] = (int16) ((AccelData[4] | (AccelData[5]<<8)) >> 4);
+                    acc[2] = value[2] * 4/4096;
+                    sprintf(message, "Z output: %.3f e %d\n", acc[2], value[2]);
+                    UART_PutString(message);
+                    value[2] = (int16) (acc[2]*scale);
+                    DataBuffer[5] = (uint8) (value[2] & 0xFF);
+                    DataBuffer[6] = (uint8) (value[2]*scale >> 8);             
+                    
+                    UART_PutArray(DataBuffer, 8);
+                }
+                else
+                {
+                    UART_PutString("An error occurred during attempt to read accelerometer output registers.\n");   
+                }
+            }
         }
         else
         {
-            UART_PutString("An error occurred during attempt to read accelerometer output registers.\n");   
+            UART_PutString("An error occurred during attempt to read status register.\n");   
         }
     }
 }
