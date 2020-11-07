@@ -4,6 +4,8 @@
 *   \author Piergiorgio Arrigoni
 */
 
+//NOTE: Sometimes the code stops for unknown reasons when reading registers; in that case the user just has to push once the reset button on the PSoC device
+
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
 #include "stdio.h"
@@ -134,7 +136,7 @@ int main(void)
     uint8 AccelData[6];
     int16 value[3];
     float acc[3];
-    uint16 scale = 1000;
+    uint16 scale = 1000; //3 significant figures to be kept
     
     //Data packet sent to the UART
     uint8 DataBuffer[8];
@@ -144,7 +146,7 @@ int main(void)
     uint8 new;
     uint8 error_acc[6];
     flag_button = 0;
-    
+     
     for(;;)
     {
         if(flag_button){
@@ -186,29 +188,29 @@ int main(void)
                     
                 if(error == 0)
                 {  
-                    value[0] = (int16) ((AccelData[0] | (AccelData[1]<<8)) >> 4); //high resolution mode is 12 bit left aligned
-                    acc[0] = value[0] * 4/4096; //full scale range is 4g on 12 bits
-                    sprintf(message, "X output: %.3f e %d\n", acc[0], value[0]);
+                    value[0] = (int16) ((AccelData[0] | (AccelData[1]<<8)) >> 4); //high resolution mode is 12 bit left-aligned
+                    acc[0] = value[0] * (4*9.81)/4096.0; //full scale range is 4g on 12 bits
+                    sprintf(message, "X output: %d e %d\n", (int16) acc[0], value[0]);
                     UART_PutString(message);
                     value[0] = (int16) (acc[0]*scale);
                     DataBuffer[1] = (uint8) (value[0] & 0xFF);
-                    DataBuffer[2] = (uint8) (value[0]*scale >> 8);
+                    DataBuffer[2] = (uint8) (value[0] >> 8);
                     
                     value[1] = (int16) ((AccelData[2] | (AccelData[3]<<8)) >> 4);
-                    acc[1] = value[1] * 4/4096;
-                    sprintf(message, "Y output: %.3f e %d\n", acc[1], value[1]);
+                    acc[1] = value[1] * (4*9.81)/4096.0;
+                    sprintf(message, "Y output: %d e %d\n", (int16) acc[1], value[1]);
                     UART_PutString(message);
                     value[1] = (int16) (acc[1]*scale);
                     DataBuffer[3] = (uint8) (value[1] & 0xFF);
-                    DataBuffer[4] = (uint8) (value[1]*scale >> 8);
+                    DataBuffer[4] = (uint8) (value[1] >> 8);
                     
                     value[2] = (int16) ((AccelData[4] | (AccelData[5]<<8)) >> 4);
-                    acc[2] = value[2] * 4/4096;
-                    sprintf(message, "Z output: %.3f e %d\n", acc[2], value[2]);
+                    acc[2] = value[2] * (4*9.81)/4096.0;
+                    sprintf(message, "Z output: %d e %d\n", (int16) acc[2], value[2]);
                     UART_PutString(message);
                     value[2] = (int16) (acc[2]*scale);
                     DataBuffer[5] = (uint8) (value[2] & 0xFF);
-                    DataBuffer[6] = (uint8) (value[2]*scale >> 8);             
+                    DataBuffer[6] = (uint8) (value[2] >> 8);             
                     
                     UART_PutArray(DataBuffer, 8);
                 }
