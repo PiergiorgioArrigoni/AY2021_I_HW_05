@@ -1,7 +1,7 @@
 /** 
- * \file I2C_Interface.h
- * \brief Header file for the I2C interface
- * \author Piergiorgio Arrigoni
+*   \file I2C_Interface.h
+*   \brief Header file for the I2C interface
+*   \author Piergiorgio Arrigoni
 */
 
 #ifndef _I2C_Interface_H_

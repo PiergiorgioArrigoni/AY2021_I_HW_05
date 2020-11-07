@@ -4,8 +4,10 @@
 *   \author Piergiorgio Arrigoni
 */
 
-//NOTE: Sometimes the code stops for unknown reasons when reading registers; in that case the user has to just push once the reset button on the PSoC device
-//NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, they're not essential for the code to interface with BCP
+/* NOTE: Sometimes the code stops or cycles indefinitely for unknown reasons when reading registers; 
+    in that case the user has to just push once the reset button on the PSoC device */
+/* NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, 
+    they're not essential for the code to interface with BCP and can be disregarded */
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
@@ -71,8 +73,7 @@ int main(void)
         {
             sprintf(message, "\nDevice 0x%02X is connected.\n", i);
             UART_PutString(message); 
-        }
-        
+        } 
     }
     
     //CONTROL REGISTER 1 setting
@@ -139,7 +140,7 @@ int main(void)
     uint8 AccelData[6]; //readings from accelerometer
     int16 value[3]; //raw data from accelerometer
     float acc[3]; //values of acceleration in m/s^2
-    uint16 scale = 10^3; //3 significant figures to be kept
+    uint16 scale = 1000; //3 significant figures to be kept
     
     //Data packet to be sent to the UART
     uint8 DataBuffer[8];
