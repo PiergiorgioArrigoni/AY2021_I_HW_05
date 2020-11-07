@@ -4,7 +4,8 @@
 *   \author Piergiorgio Arrigoni
 */
 
-//NOTE: Sometimes the code stops for unknown reasons when reading registers; in that case the user just has to push once the reset button on the PSoC device
+//NOTE: Sometimes the code stops for unknown reasons when reading registers; in that case the user has to just push once the reset button on the PSoC device
+//NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, they're not essential for the code to interface with BCP
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
@@ -57,6 +58,7 @@ int main(void)
     ISR_Button_StartEx(Button_ISR);
     
     char message[70]; //string to be sent to the UART
+    uint8 error; //used to check errors in I2C communications
     uint8 i;
 
     //Checking which devices are present on the I2C bus (LIS3DH_DEVICE_ADDRESS should be present)
@@ -69,8 +71,6 @@ int main(void)
         }
         
     }
-
-    uint8 error; 
     
     //CONTROL REGISTER 1 setting
     uint8 ctrl_reg1; 
@@ -133,23 +133,24 @@ int main(void)
     }
     
     //Measurement variables definition
-    uint8 AccelData[6];
-    int16 value[3];
-    float acc[3];
-    uint16 scale = 1000; //3 significant figures to be kept
+    uint8 AccelData[6]; //readings from accelerometer
+    int16 value[3]; //raw data from accelerometer
+    float acc[3]; //values of acceleration in m/s^2
+    uint16 scale = 10^3; //3 significant figures to be kept
     
-    //Data packet sent to the UART
+    //Data packet to be sent to the UART
     uint8 DataBuffer[8];
     DataBuffer[0] = 0xA0; //header byte
     DataBuffer[7] = 0xC0; //tail byte
     
-    uint8 new;
-    uint8 error_acc[6];
+    uint8 new; //used to check if a set of new values is present in the registers
+    uint8 error_acc[6]; //used to check errors in the accelerometer readings
     flag_button = 0;
      
     for(;;)
     {
-        if(flag_button){
+        if(flag_button)
+        {
             flag_button = 0;
             fs_current = fs_config[fs_index];
             ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
@@ -179,8 +180,9 @@ int main(void)
                 error_acc[4] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_L, &AccelData[4]);
                 error_acc[5] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_H, &AccelData[5]);
                 
+                //Checking if there has been at least one error in accelerometer readings
                 error = 0;
-                for(i=0; i<6; i++) //checking if there has been at least one error in accelerometer readings
+                for(i=0; i<6; i++) 
                 {
                     if(error_acc[i] == 1)
                         error = 1;
