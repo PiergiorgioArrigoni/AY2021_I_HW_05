@@ -188,31 +188,34 @@ int main(void)
                     
                 if(error == 0)
                 {  
-                    value[0] = (int16) ((AccelData[0] | (AccelData[1]<<8)) >> 4); //high resolution mode is 12 bit left-aligned
-                    acc[0] = value[0] * (4*9.81)/4096.0; //full scale range is 4g on 12 bits
-                    sprintf(message, "X output: %d e %d\n", (int16) acc[0], value[0]);
+                    //Fixing X output for transmission
+                    value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left-aligned
+                    acc[0] = value[0] * (2*9.81)/2048.0; //full scale range is ±2g (g = 9.81 m/s^2) on 12 bits signed
+                    sprintf(message, "X output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[0], value[0]); //cannot display float in coolterm
                     UART_PutString(message);
-                    value[0] = (int16) (acc[0]*scale);
+                    value[0] = (int16) (acc[0]*scale); //scaling in order to carry out transmission and save significant figures
                     DataBuffer[1] = (uint8) (value[0] & 0xFF);
                     DataBuffer[2] = (uint8) (value[0] >> 8);
                     
-                    value[1] = (int16) ((AccelData[2] | (AccelData[3]<<8)) >> 4);
+                    //Fixing Y output for transmission
+                    value[1] = (int16) (AccelData[2] | (AccelData[3]<<8)) >> 4;
                     acc[1] = value[1] * (4*9.81)/4096.0;
-                    sprintf(message, "Y output: %d e %d\n", (int16) acc[1], value[1]);
+                    sprintf(message, "Y output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[1], value[1]);
                     UART_PutString(message);
                     value[1] = (int16) (acc[1]*scale);
                     DataBuffer[3] = (uint8) (value[1] & 0xFF);
                     DataBuffer[4] = (uint8) (value[1] >> 8);
                     
-                    value[2] = (int16) ((AccelData[4] | (AccelData[5]<<8)) >> 4);
+                    //Fixing Z output for transmission
+                    value[2] = (int16) (AccelData[4] | (AccelData[5]<<8)) >> 4;
                     acc[2] = value[2] * (4*9.81)/4096.0;
-                    sprintf(message, "Z output: %d e %d\n", (int16) acc[2], value[2]);
+                    sprintf(message, "Z output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[2], value[2]);
                     UART_PutString(message);
                     value[2] = (int16) (acc[2]*scale);
                     DataBuffer[5] = (uint8) (value[2] & 0xFF);
                     DataBuffer[6] = (uint8) (value[2] >> 8);             
                     
-                    UART_PutArray(DataBuffer, 8);
+                    UART_PutArray(DataBuffer, 8); //transmitting packet to bridge control panel
                 }
                 else
                 {
