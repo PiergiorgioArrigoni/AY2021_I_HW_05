@@ -40,21 +40,25 @@ int main(void)
     UART_Start();
     EEPROM_Start();
     
-    CyDelay(5); //boot procedure takes 5 ms to complete
+    CyDelay(5); //LIS3DH boot procedure takes 5 ms to complete
     
-    fs_index = EEPROM_ReadByte(EEPROM_ADDRESS); //startup register reading
-      
-    uint16 fs_values[NUMB_OF_FREQ] = {FS_1, FS_10, FS_25, FS_50, FS_100, FS_200}; //sampling frequency values
-    uint16 fs_current = fs_values[fs_index]; //sampling frequency value at startup
+    fs_index = EEPROM_ReadByte(EEPROM_ADDRESS); //startup register reading   
+    if(fs_index >= NUMB_OF_FREQ) //if frequency index is out of range (e.g. it's the first time we use the device) we set it at the first value
+        fs_index = 0;
+    
+    uint16 fs_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200}; //sampling frequency values
+    uint8 fs_config[NUMB_OF_FREQ] = {FS_1, FS_10, FS_25, FS_50, FS_100, FS_200}; //sampling frequency register configuration values
+    uint8 fs_current = fs_config[fs_index]; //sampling frequency configuration value at startup
     
     //Enable button interrupt
     CyGlobalIntEnable;
     ISR_Button_StartEx(Button_ISR);
     
     char message[70]; //string to be sent to the UART
+    uint8 i;
 
     //Checking which devices are present on the I2C bus (LIS3DH_DEVICE_ADDRESS should be present)
-    for(uint8 i=0; i<128; i++)
+    for(i=0; i<128; i++)
     {
         if(I2C_IsDeviceConnected(i))
         {
@@ -66,13 +70,13 @@ int main(void)
 
     uint8 error; 
     
-    //CONTROL REGISTER 1
+    //CONTROL REGISTER 1 setting
     uint8 ctrl_reg1; 
     error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, &ctrl_reg1);
     
     if (error == 0)
     {
-        sprintf(message, "CONTROL REGISTER 1: 0x%02X\r\n", ctrl_reg1);
+        sprintf(message, "CONTROL REGISTER 1: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
         UART_PutString(message); 
     }
     else
@@ -87,7 +91,7 @@ int main(void)
     
         if (error == 0)
         {
-            sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X\n", ctrl_reg1);
+            sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
             UART_PutString(message); 
         }
         else
@@ -96,7 +100,7 @@ int main(void)
         }
     }
     
-    //CONTROL REGISTER 4
+    //CONTROL REGISTER 4 setting
     uint8 ctrl_reg4; 
     error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG4, &ctrl_reg4);
     
@@ -126,25 +130,78 @@ int main(void)
         }
     }
     
+    uint8 AccelData[6];
+    uint16 value[3];
+    float acc[3];
+    uint16 scale = 1000;
+    
+    uint8 DataBuffer[8];
+    DataBuffer[0] = 0xA0; //header byte
+    DataBuffer[7] = 0xC0; //tail byte
+    
+    uint8 error_acc[6];
     flag_button = 0;
     
     for(;;)
     {
         if(flag_button){
             flag_button = 0;
-            fs_current = fs_values[fs_index];
+            fs_current = fs_config[fs_index];
             ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
             error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
         
             if (error == 0)
             {
-                sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X\n", ctrl_reg1);
+                sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
                 UART_PutString(message); 
             }
             else
             {
                 UART_PutString("An error occurred during attempt to set control register 1.\n");   
             }
+        }
+        
+        //CyDelay(100);
+        
+        //Accelerometer values reading
+        error_acc[0] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, &AccelData[0]);
+        error_acc[1] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_H, &AccelData[1]);
+        error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_L, &AccelData[2]);
+        error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_H, &AccelData[3]);
+        error_acc[4] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_L, &AccelData[4]);
+        error_acc[5] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_H, &AccelData[5]);
+        
+        error = 0;
+        for(i=0; i<6; i++) //checking if there has been at least one error in accelerometer readings
+        {
+            if(error_acc[i] == 1)
+                error = 1;
+        }
+            
+        if(error == 0)
+        {  
+            value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
+            acc[0] = value[0] * 8/65535;
+            sprintf(message, "X output: %.3f\n", acc[0]);
+            UART_PutString(message);
+            
+            value[1] = (int16) (AccelData[2] | (AccelData[3]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
+            acc[1] = value[1] * 8/65535;
+            sprintf(message, "Y output: %.3f\n", acc[1]);
+            UART_PutString(message);
+            
+            value[2] = (int16) (AccelData[4] | (AccelData[5]<<8)) >> 4; //high resolution mode is 12 bit left aligned???
+            acc[2] = value[2] * 8/65535;
+            sprintf(message, "Z output: %.3f\n", acc[2]);
+            UART_PutString(message);
+
+            /*OutArray[1] = (uint8_t)(OutTemp & 0xFF);
+            OutArray[2] = (uint8_t)(OutTemp >> 8);
+            UART_PutArray(OutArray, 4);*/
+        }
+        else
+        {
+            UART_PutString("An error occurred during attempt to read accelerometer output registers.\n");   
         }
     }
 }
