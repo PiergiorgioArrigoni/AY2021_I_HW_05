@@ -4,16 +4,14 @@
 *   \author Piergiorgio Arrigoni
 */
 
-/* NOTE: Sometimes the code stops or cycles indefinitely for unknown reasons when reading registers; 
-    in that case the user has to just push once the reset button on the PSoC device */
+/* NOTE: Sometimes the code stops or cycles indefinitely for unknown reasons when reading the status register; 
+    in that case the user has to just push the reset button on the PSoC device once to reboot the system */
 /* NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, 
     they're not essential for the code to interface with BCP and can be disregarded */
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
 #include "stdio.h"
-
-#define EEPROM_ADDRESS 0x00 //eeprom address on which the index of the startup sampling frequency is saved
 
 //LIS3DH control/status registers
 #define LIS3DH_DEVICE_ADDRESS 0x18 //address of the slave device
@@ -25,7 +23,7 @@
 #define LIS3DH_READY_STATUS_REG 0x08 //bit that goes to 1 when a new set of data is available
 
 //Accelerometer output registers
-#define LIS3DH_OUT_X_L 0x28
+#define LIS3DH_OUT_X_L 0x28 //with multi-register reading, this is the only define actually needed
 #define LIS3DH_OUT_X_H 0x29
 #define LIS3DH_OUT_Y_L 0x2A
 #define LIS3DH_OUT_Y_H 0x2B
@@ -97,7 +95,7 @@ int main(void)
     
         if (!error)
         {
-            sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
+            sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \n", ctrl_reg1);
             UART_PutString(message); 
         }
         else
@@ -148,7 +146,6 @@ int main(void)
     DataBuffer[7] = 0xC0; //tail byte
     
     uint8 new; //used to check if a set of new values is present in the registers
-    uint8 error_acc[6]; //used to check errors in the accelerometer readings
     flag_button = 0;
      
     for(;;)
@@ -156,9 +153,6 @@ int main(void)
         if(flag_button)
         {
             flag_button = 0;
-            EEPROM_UpdateTemperature(); //security measure because temperature might have changed of more than 10 degrees
-            EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
-            
             fs_current = fs_config[fs_index];
             ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
             error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
@@ -173,34 +167,19 @@ int main(void)
                 UART_PutString("An error occurred during attempt to set control register 1.\n");   
             }
         }
-        
+
         error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_STATUS_REG, &new);
         if (!error)
         {
-            if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the registers
-            {
-                //Accelerometer values reading
-                error_acc[0] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, &AccelData[0]);
-                error_acc[1] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_H, &AccelData[1]);
-                error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_L, &AccelData[2]);
-                error_acc[3] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Y_H, &AccelData[3]);
-                error_acc[4] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_L, &AccelData[4]);
-                error_acc[5] = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_Z_H, &AccelData[5]);
-                
-                //Checking if there has been at least one error in accelerometer readings
-                error = 0;
-                for(i=0; i<6; i++) 
-                {
-                    if(error_acc[i])
-                        error = 1;
-                }
-                    
+            if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the accelerometer registers
+            {           
+                error = I2C_ReadRegisterMulti(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, 6, &AccelData[0]);    
                 if(!error)
                 {  
                     //Fixing X output for transmission
                     value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left-aligned
                     acc[0] = value[0] * (2*9.81)/2048.0; //full scale range is ±2g (g = 9.81 m/s^2) on 12 bits signed
-                    sprintf(message, "X output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[0], value[0]); //cannot display float in coolterm
+                    sprintf(message, "\nX output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[0], value[0]); //cannot display float in coolterm
                     UART_PutString(message);
                     value[0] = (int16) (acc[0]*scale); //scaling in order to carry out transmission and save significant figures
                     DataBuffer[1] = (uint8) (value[0] & 0xFF);
@@ -228,14 +207,14 @@ int main(void)
                 }
                 else
                 {
-                    UART_PutString("An error occurred during attempt to read accelerometer output registers.\n");   
+                    UART_PutString("One or more errors occurred during attempt to read accelerometer output registers.\n");   
                 }
             }
         }
         else
         {
             UART_PutString("An error occurred during attempt to read status register.\n");   
-        }
+        } 
     }
 }
 

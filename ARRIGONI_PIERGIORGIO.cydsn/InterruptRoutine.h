@@ -9,10 +9,11 @@
     
     #include "project.h"
     
+    #define EEPROM_ADDRESS 0x00 //eeprom address on which the index of the startup sampling frequency is saved
     #define NUMB_OF_FREQ 6 //number of sampling frequency values
     
-    volatile uint8 fs_index; //index of the current sampling frequency
-    volatile uint8 flag_button; //flag lifted by the button ISR
+    uint8 fs_index; //index of the current sampling frequency
+    uint8 flag_button; //flag lifted by the button ISR
     
     CY_ISR_PROTO(Button_ISR); //ISR triggered by the pressing of the button
 #endif
