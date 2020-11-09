@@ -4,14 +4,17 @@
 *   \author Piergiorgio Arrigoni
 */
 
-/* NOTE: Sometimes the code stops or cycles indefinitely for unknown reasons when reading the status register; 
-    in that case the user has to just push the reset button on the PSoC device once to reboot the system */
+/* WARNING: Tthe code may sometimes cycles indefinitely in reading the status register, because the wrong device address is read, for unknown reasons;
+    in this case the user has to just PUSH the reset button on the PSoC device ONCE or disconnect and reconnect power supply if the problem persists */
 /* NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, 
     they're not essential for the code to interface with BCP and can be disregarded */
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
 #include "stdio.h"
+
+#define EEPROM_ADDRESS 0x00 //eeprom address on which the index of the startup sampling frequency is saved
+#define NUMB_OF_FREQ 6 //number of sampling frequency values
 
 //LIS3DH control/status registers
 #define LIS3DH_DEVICE_ADDRESS 0x18 //address of the slave device
@@ -48,13 +51,12 @@ int main(void)
     
     CyDelay(5); //LIS3DH boot procedure takes 5 ms to complete
     
-    fs_index = EEPROM_ReadByte(EEPROM_ADDRESS); //startup register reading   
+    uint8 fs_index = EEPROM_ReadByte(EEPROM_ADDRESS); //startup register reading of the index of the current sampling frequency    
     if(fs_index >= NUMB_OF_FREQ) //if frequency index is out of range (e.g. it's the first time we use the device) we set it at the first value
         fs_index = 0;
     
     uint16 fs_values[NUMB_OF_FREQ] = {1, 10, 25, 50, 100, 200}; //sampling frequency values
     uint8 fs_config[NUMB_OF_FREQ] = {FS_1, FS_10, FS_25, FS_50, FS_100, FS_200}; //sampling frequency register configuration values
-    uint8 fs_current = fs_config[fs_index]; //sampling frequency configuration value at startup
     
     //Enable button interrupt
     CyGlobalIntEnable;
@@ -69,7 +71,7 @@ int main(void)
     {
         if(I2C_IsDeviceConnected(i))
         {
-            sprintf(message, "\nDevice 0x%02X is connected.\n", i);
+            sprintf(message, "\n\nDevice 0x%02X is connected.\n", i);
             UART_PutString(message); 
         } 
     }
@@ -80,7 +82,7 @@ int main(void)
     
     if (!error)
     {
-        sprintf(message, "CONTROL REGISTER 1: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
+        sprintf(message, "CONTROL REGISTER 1: 0x%02X \n", ctrl_reg1);
         UART_PutString(message); 
     }
     else
@@ -88,9 +90,9 @@ int main(void)
         UART_PutString("An error occurred during attempt to read control register 1.\n");   
     }
     
-    if (ctrl_reg1 != (LIS3DH_SET_CTRL_REG1 | fs_current<<4))
+    if (ctrl_reg1 != (LIS3DH_SET_CTRL_REG1 | (fs_config[fs_index]<<4)))
     {
-        ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
+        ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | (fs_config[fs_index]<<4));
         error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
     
         if (!error)
@@ -103,6 +105,9 @@ int main(void)
             UART_PutString("An error occurred during attempt to set control register 1.\n");   
         }
     }
+    
+    sprintf(message, "Frequency sampling value: %d\n", fs_values[fs_index]);
+    UART_PutString(message);
     
     //CONTROL REGISTER 4 setting
     uint8 ctrl_reg4; 
@@ -153,19 +158,27 @@ int main(void)
         if(flag_button)
         {
             flag_button = 0;
-            fs_current = fs_config[fs_index];
-            ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | fs_current<<4);
+            fs_index++;
+            if(fs_index == NUMB_OF_FREQ) //cycle must be started again
+                fs_index = 0;
+    
+            EEPROM_UpdateTemperature(); //security measure because temperature might have changed of more than 10 degrees
+            EEPROM_WriteByte(fs_index, EEPROM_ADDRESS); //startup register writing
+            
+            ctrl_reg1 = (LIS3DH_SET_CTRL_REG1 | (fs_config[fs_index]<<4));
             error = I2C_WriteRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_CTRL_REG1, ctrl_reg1);
-        
             if (!error)
             {
-                sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \nFrequency sampling value: %d\n", ctrl_reg1, fs_values[fs_index]);
+                sprintf(message, "\n\nCONTROL REGISTER 1 successfully written as: 0x%02X \n", ctrl_reg1);
                 UART_PutString(message); 
             }
             else
             {
                 UART_PutString("An error occurred during attempt to set control register 1.\n");   
             }
+            
+            sprintf(message, "Frequency sampling value: %d\n", fs_values[fs_index]);
+            UART_PutString(message);
         }
 
         error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_STATUS_REG, &new);
@@ -173,7 +186,7 @@ int main(void)
         {
             if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the accelerometer registers
             {           
-                error = I2C_ReadRegisterMulti(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, 6, &AccelData[0]);    
+                error = I2C_ReadRegisterMulti(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, 6, AccelData);    
                 if(!error)
                 {  
                     //Fixing X output for transmission
