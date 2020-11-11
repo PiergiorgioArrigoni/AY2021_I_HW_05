@@ -255,6 +255,7 @@
       <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="Push_Button" />
       <Data key="34cfed22-c960-4363-8ecf-2f6fc0d15200" value="I2C" />
       <Data key="22863ebe-a37b-476f-b252-6e49a8c00b12" value="SDA" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="Pin_1" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="TX" />
     </Group>
   </Group>
@@ -3355,6 +3356,11 @@
     <Group key="22863ebe-a37b-476f-b252-6e49a8c00b12">
       <Group key="0">
         <Data key="Port Format" value="12,1" />
+      </Group>
+    </Group>
+    <Group key="e851a3b9-efb8-48be-bbb8-b303b216c393">
+      <Group key="0">
+        <Data key="Port Format" value="12,6" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">

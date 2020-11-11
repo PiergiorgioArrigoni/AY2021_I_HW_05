@@ -4,10 +4,10 @@
 *   \author Piergiorgio Arrigoni
 */
 
-/* WARNING: Tthe code may sometimes cycles indefinitely in reading the status register, because the wrong device address is read, for unknown reasons;
+/* WARNING: The code may sometimes cycles indefinitely in reading the status register, because the wrong device address is read, for unknown reasons;
     in this case the user has to just PUSH the reset button on the PSoC device ONCE or disconnect and reconnect power supply if the problem persists */
-/* NOTE: All "sprintf" and "UART_PutString" instances can be used to debug the code with CoolTerm, 
-    they're not essential for the code to interface with BCP and can be disregarded */
+/* NOTE: All "sprintf" and "UART_PutString" instances were used to debug the code with CoolTerm, 
+    when interfacing with BCP they fill up the bandwidth and so they were put as comments */
 
 #include "InterruptRoutine.h"
 #include "I2C_Interface.h"
@@ -72,7 +72,7 @@ int main(void)
         if(I2C_IsDeviceConnected(i))
         {
             sprintf(message, "\n\nDevice 0x%02X is connected.\n", i);
-            UART_PutString(message); 
+            //UART_PutString(message); 
         } 
     }
     
@@ -83,11 +83,11 @@ int main(void)
     if (!error)
     {
         sprintf(message, "CONTROL REGISTER 1: 0x%02X \n", ctrl_reg1);
-        UART_PutString(message); 
+        //UART_PutString(message); 
     }
     else
     {
-        UART_PutString("An error occurred during attempt to read control register 1.\n");   
+        //UART_PutString("An error occurred during attempt to read control register 1.\n");   
     }
     
     if (ctrl_reg1 != (LIS3DH_SET_CTRL_REG1 | (fs_config[fs_index]<<4)))
@@ -98,16 +98,16 @@ int main(void)
         if (!error)
         {
             sprintf(message, "CONTROL REGISTER 1 successfully written as: 0x%02X \n", ctrl_reg1);
-            UART_PutString(message); 
+            //UART_PutString(message); 
         }
         else
         {
-            UART_PutString("An error occurred during attempt to set control register 1.\n");   
+            //UART_PutString("An error occurred during attempt to set control register 1.\n");   
         }
     }
     
     sprintf(message, "Frequency sampling value: %d\n", fs_values[fs_index]);
-    UART_PutString(message);
+    //UART_PutString(message);
     
     //CONTROL REGISTER 4 setting
     uint8 ctrl_reg4; 
@@ -116,11 +116,11 @@ int main(void)
     if (!error)
     {
         sprintf(message, "CONTROL REGISTER 4: 0x%02X\r\n", ctrl_reg4);
-        UART_PutString(message); 
+        //UART_PutString(message); 
     }
     else
     {
-        UART_PutString("An error occurred during attempt to read control register 4.\n");   
+        //UART_PutString("An error occurred during attempt to read control register 4.\n");   
     }
     
     if (ctrl_reg4 != LIS3DH_SET_CTRL_REG4)
@@ -131,11 +131,11 @@ int main(void)
         if (!error)
         {
             sprintf(message, "CONTROL REGISTER 4 successfully written as: 0x%02X\n", ctrl_reg4);
-            UART_PutString(message); 
+            //UART_PutString(message); 
         }
         else
         {
-            UART_PutString("An error occurred during attempt to set control register 1.\n");   
+            //UART_PutString("An error occurred during attempt to set control register 1.\n");   
         }
     }
     
@@ -170,21 +170,21 @@ int main(void)
             if (!error)
             {
                 sprintf(message, "\n\nCONTROL REGISTER 1 successfully written as: 0x%02X \n", ctrl_reg1);
-                UART_PutString(message); 
+                //UART_PutString(message); 
             }
             else
             {
-                UART_PutString("An error occurred during attempt to set control register 1.\n");   
+                //UART_PutString("An error occurred during attempt to set control register 1.\n");   
             }
             
             sprintf(message, "Frequency sampling value: %d\n", fs_values[fs_index]);
-            UART_PutString(message);
+            //UART_PutString(message);
         }
 
         error = I2C_ReadRegister(LIS3DH_DEVICE_ADDRESS, LIS3DH_STATUS_REG, &new);
         if (!error)
         {
-            if((new & LIS3DH_READY_STATUS_REG) == LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the accelerometer registers
+            if(new &= LIS3DH_READY_STATUS_REG) //checking if a set of new values is present in the accelerometer registers
             {           
                 error = I2C_ReadRegisterMulti(LIS3DH_DEVICE_ADDRESS, LIS3DH_OUT_X_L, 6, AccelData);    
                 if(!error)
@@ -193,7 +193,7 @@ int main(void)
                     value[0] = (int16) (AccelData[0] | (AccelData[1]<<8)) >> 4; //high resolution mode is 12 bit left-aligned
                     acc[0] = value[0] * (2*9.81)/2048.0; //full scale range is ±2g (g = 9.81 m/s^2) on 12 bits signed
                     sprintf(message, "\nX output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[0], value[0]); //cannot display float in coolterm
-                    UART_PutString(message);
+                    //UART_PutString(message);
                     value[0] = (int16) (acc[0]*scale); //scaling in order to carry out transmission and save significant figures
                     DataBuffer[1] = (uint8) (value[0] & 0xFF);
                     DataBuffer[2] = (uint8) (value[0] >> 8);
@@ -202,7 +202,7 @@ int main(void)
                     value[1] = (int16) (AccelData[2] | (AccelData[3]<<8)) >> 4;
                     acc[1] = value[1] * (4*9.81)/4096.0;
                     sprintf(message, "Y output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[1], value[1]);
-                    UART_PutString(message);
+                    //UART_PutString(message);
                     value[1] = (int16) (acc[1]*scale);
                     DataBuffer[3] = (uint8) (value[1] & 0xFF);
                     DataBuffer[4] = (uint8) (value[1] >> 8);
@@ -211,7 +211,7 @@ int main(void)
                     value[2] = (int16) (AccelData[4] | (AccelData[5]<<8)) >> 4;
                     acc[2] = value[2] * (4*9.81)/4096.0;
                     sprintf(message, "Z output in m/s^2 (with raw output): %d (%d)\n", (int16) acc[2], value[2]);
-                    UART_PutString(message);
+                    //UART_PutString(message);
                     value[2] = (int16) (acc[2]*scale);
                     DataBuffer[5] = (uint8) (value[2] & 0xFF);
                     DataBuffer[6] = (uint8) (value[2] >> 8);             
@@ -220,13 +220,13 @@ int main(void)
                 }
                 else
                 {
-                    UART_PutString("One or more errors occurred during attempt to read accelerometer output registers.\n");   
+                    //UART_PutString("One or more errors occurred during attempt to read accelerometer output registers.\n");   
                 }
             }
         }
         else
         {
-            UART_PutString("An error occurred during attempt to read status register.\n");   
+            //UART_PutString("An error occurred during attempt to read status register.\n");   
         } 
     }
 }
